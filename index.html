@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Flow & Glow v12.6</title>
+    
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#9b59b6">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+    <style>
+        :root {
+            --bg-gradient: linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 100%);
+            --card-bg: rgba(255, 255, 255, 0.94);
+            --primary-color: #9b59b6; 
+            --text-color: #555;
+            --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+        }
+
+        body {
+            margin: 0; padding: 0; height: 100vh;
+            display: flex; justify-content: center; align-items: center;
+            background: var(--bg-gradient);
+            font-family: "Microsoft YaHei", sans-serif;
+            overflow: hidden; color: var(--text-color);
+            -webkit-user-select: none; /* 防止系统级选中干扰 UI */
+        }
+
+        #app-container {
+            background: var(--card-bg);
+            padding: 40px 30px;
+            border-radius: 30px;
+            box-shadow: var(--glass-shadow);
+            backdrop-filter: blur(10px);
+            width: 85%; max-width: 400px;
+            text-align: center; position: relative; z-index: 10;
+            max-height: 90vh; overflow-y: auto;
+        }
+
+        /* 任务条样式 */
+        .sub-task-item {
+            background: white; padding: 14px 18px; border-radius: 16px; margin-bottom: 12px;
+            display: flex; justify-content: space-between; align-items: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.03); cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .sub-task-item:active { transform: scale(0.98); }
+        .sub-task-item.done { opacity: 0.6; background: #fafafa; }
+        .drag-handle { cursor: grab; color: #ddd; padding-right: 12px; font-size: 20px; }
+
+        /* 计时器视觉 */
+        .timer-circle {
+            width: 220px; height: 220px; border-radius: 50%;
+            background: white; margin: 20px auto;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            position: relative; overflow: hidden;
+            box-shadow: 0 15px 45px rgba(155, 89, 182, 0.1);
+        }
+        .progress-fill { position: absolute; bottom: 0; width: 100%; height: 0%; background: rgba(155, 89, 182, 0.1); transition: height 1s linear; }
+
+        /* 复盘热力图 */
+        .heatmap-container { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; margin: 20px 0; }
+        .heat-cell { aspect-ratio: 1; border-radius: 6px; background: #f0f0f0; position: relative; }
+        .heat-cell span { position: absolute; bottom: -14px; left: 0; width: 100%; font-size: 10px; color: #aaa; }
+
+        /* 通用按钮 */
+        .btn { background: var(--primary-color); color: white; border: none; padding: 14px 35px; border-radius: 50px; cursor: pointer; font-weight: 600; margin: 8px; }
+        .hidden { display: none !important; }
+        .fade-in { animation: fadeIn 0.4s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        /* 模态框样式 */
+        .modal-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.96); z-index: 100; display: flex; justify-content: center; align-items: center; opacity: 0; pointer-events: none; transition: 0.3s; border-radius: 30px; }
+        .modal-overlay.open { opacity: 1; pointer-events: auto; }
+        .modal-card { width: 85%; max-height: 80%; overflow-y: auto; }
+    </style>
+</head>
+<body>
+
+<canvas id="confetti-canvas" style="position: absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:5;"></canvas>
+
+<div id="app-container">
+    <div id="step-input" class="fade-in">
+        <h1 style="color:var(--primary-color)">Flow & Glow</h1>
+        <p>今天想种下什么种子？</p>
+        <input type="text" id="big-task-input" placeholder="✨ 输入任务名称..." style="width:100%; padding:15px; border:none; background:#f5f5f5; border-radius:15px; text-align:center; margin-bottom:20px;">
+        <div style="display:flex; justify-content:center; gap:10px;">
+            <button class="btn" onclick="quickStart(5)">5m</button>
+            <button class="btn" onclick="quickStart(15)">15m</button>
+            <button class="btn" onclick="quickStart(30)">30m</button>
+        </div>
+        <button onclick="toPlanning()" style="background:none; border:none; color:#aaa; margin-top:20px; cursor:pointer;">🪜 拆解任务步骤 &raquo;</button>
+        <div style="margin-top:30px; display:flex; justify-content:center; gap:40px;">
+            <span onclick="openModal('depot-modal')" style="cursor:pointer; font-size:24px;">🧺</span>
+            <span onclick="showDailySummary()" style="cursor:pointer; font-size:24px;">📝</span>
+        </div>
+    </div>
+
+    <div id="step-planning" class="hidden fade-in">
+        <h2>🗓️ 任务拆解</h2>
+        <div id="task-progress-bar" style="height:6px; background:#eee; border-radius:10px; margin-bottom:20px;"><div id="progress-fill-line" style="height:100%; width:0%; background:var(--primary-color); border-radius:10px; transition:0.4s;"></div></div>
+        <div style="display:flex; gap:10px; margin-bottom:20px;">
+            <input type="text" id="sub-task-input" placeholder="下一步是..." style="flex:1; padding:12px; border:none; background:#f5f5f5; border-radius:12px;">
+            <button class="btn" style="padding:10px 20px;" onclick="addSubTask()">+</button>
+        </div>
+        <div id="planning-list" style="max-height:300px; overflow-y:auto; text-align:left;"></div>
+        <button onclick="location.reload()" style="background:none; border:none; color:#bbb; margin-top:20px;">返回首页</button>
+    </div>
+
+    <div id="step-setup" class="hidden fade-in">
+        <h2>选择时长</h2>
+        <p><strong id="current-task-name-display" style="color:var(--primary-color); font-size:1.2em;"></strong></p>
+        <div style="display:flex; justify-content:center; gap:15px; margin:40px 0;">
+            <button class="btn" onclick="startFocusFromPlan(5)">5m</button>
+            <button class="btn" onclick="startFocusFromPlan(15)">15m</button>
+            <button class="btn" onclick="startFocusFromPlan(30)">30m</button>
+        </div>
+        <button onclick="showSection('step-planning')" style="background:none; border:none; color:#bbb;">返回列表</button>
+    </div>
+
+    <div id="step-focus" class="hidden fade-in">
+        <h3 id="focus-task-display" style="color:#aaa; font-weight:normal;"></h3>
+        <div class="timer-circle">
+            <div class="progress-fill" id="timer-progress"></div>
+            <span id="timer-display" style="font-size:3.8em; z-index:2; font-weight:300;">00:00</span>
+            <span id="timer-status" style="z-index:2; opacity:0.5; font-size:0.9em;">专注中</span>
+        </div>
+        <button class="btn" style="background:#fff3e0; color:#f57c00;" onclick="togglePause()" id="pause-btn">☕ 暂停</button>
+        <div style="margin-top:25px;">
+            <button class="btn" onclick="finishTask()">🎉 完成</button>
+        </div>
+    </div>
+
+    <div id="step-celebrate" class="hidden fade-in">
+        <div style="font-size:60px;">💐</div>
+        <h2 style="color:var(--primary-color)">太棒了！</h2>
+        <p id="praise-text" style="font-weight:bold;"></p>
+        <button class="btn" style="background:#2ecc71" onclick="startRest()">🧘 休息 5 分钟</button><br>
+        <button class="btn" onclick="backToPlanning()">继续下一步</button>
+    </div>
+
+    <div id="summary-modal" class="modal-overlay">
+        <div class="modal-card">
+            <h3>📝 复盘热力图</h3>
+            <div id="heatmap-grid" class="heatmap-container"></div>
+            <div id="summary-list" style="text-align:left; color:#666; font-size:0.9em; border-top:1px solid #eee; padding-top:15px;"></div>
+            <button class="btn" style="margin-top:20px; width:100%; background:#2ecc71" onclick="exportToCSV()">📥 导出数据</button>
+            <button onclick="closeModal('summary-modal')" style="background:none; border:none; color:#bbb; margin-top:15px;">关闭</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // 注册 Service Worker
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('sw.js').then(reg => console.log('SW Registered'));
+        });
+    }
+
+    // 核心数据
+    let workLogs = JSON.parse(localStorage.getItem('flow_v11_logs')) || [];
+    let subTasks = [];
+    let currentTask = "";
+    let currentIndex = -1;
+    let timer, totalSec, remainSec, isPaused, isRest = false;
+
+    // 交互逻辑
+    function showSection(id) {
+        document.querySelectorAll('#app-container > div').forEach(d => { if(!d.classList.contains('modal-overlay')) d.classList.add('hidden'); });
+        document.getElementById(id).classList.remove('hidden');
+    }
+    function openModal(id) { document.getElementById(id).classList.add('open'); }
+    function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+    function quickStart(m) { currentTask = document.getElementById('big-task-input').value || "✨ 快速专注"; startTimer(currentTask, m); }
+    function toPlanning() { 
+        let val = document.getElementById('big-task-input').value;
+        if(!val) return alert("请先输入任务名称");
+        showSection('step-planning');
+        renderSubTasks();
+    }
+    function addSubTask() {
+        let input = document.getElementById('sub-task-input');
+        if(input.value) { subTasks.push({name: input.value, done: false}); input.value = ""; renderSubTasks(); }
+    }
+    function renderSubTasks() {
+        let list = document.getElementById('planning-list');
+        list.innerHTML = "";
+        subTasks.forEach((t, i) => {
+            let div = document.createElement('div');
+            div.className = `sub-task-item ${t.done ? 'done' : ''}`;
+            div.innerHTML = `<span class="drag-handle">☰</span><span style="flex:1" onclick="goToSetup(${i})">${t.name}</span><span>${t.done ? '✅' : '👉'}</span>`;
+            list.appendChild(div);
+        });
+        document.getElementById('progress-fill-line').style.width = (subTasks.filter(t=>t.done).length / subTasks.length * 100) + '%';
+    }
+    function goToSetup(i) { currentIndex = i; currentTask = subTasks[i].name; document.getElementById('current-task-name-display').innerText = currentTask; showSection('step-setup'); }
+    function startFocusFromPlan(m) { startTimer(currentTask, m); }
+
+    function startTimer(name, m) {
+        document.getElementById('focus-task-display').innerText = name;
+        showSection('step-focus');
+        totalSec = m * 60; remainSec = totalSec; isPaused = false;
+        updateTimerUI();
+        clearInterval(timer);
+        timer = setInterval(() => {
+            if(!isPaused) { remainSec--; updateTimerUI(); if(remainSec <= 0) { clearInterval(timer); finishTask(); } }
+        }, 1000);
+    }
+    function updateTimerUI() {
+        let min = Math.floor(remainSec/60).toString().padStart(2,'0');
+        let sec = (remainSec%60).toString().padStart(2,'0');
+        document.getElementById('timer-display').innerText = `${min}:${sec}`;
+        document.getElementById('timer-progress').style.height = (totalSec-remainSec)/totalSec*100 + '%';
+    }
+    function togglePause() { isPaused = !isPaused; document.getElementById('pause-btn').innerText = isPaused ? "▶️ 继续" : "☕ 暂停"; }
+    
+    function finishTask() {
+        if(isRest) { backToPlanning(); return; }
+        const today = new Date().toISOString().split('T')[0];
+        workLogs.push({date: today, task: currentTask, duration: Math.ceil((totalSec - remainSec)/60)});
+        localStorage.setItem('flow_v11_logs', JSON.stringify(workLogs));
+        if(currentIndex !== -1) subTasks[currentIndex].done = true;
+        document.getElementById('praise-text').innerText = "你刚才的表现简直太赞了！";
+        showSection('step-celebrate');
+        fireConfetti();
+    }
+    function startRest() { isRest = true; startTimer("🧘 发呆休息", 5); }
+    function backToPlanning() { isRest = false; renderSubTasks(); showSection('step-planning'); }
+
+    // 复盘
+    function showDailySummary() {
+        let grid = document.getElementById('heatmap-grid'); grid.innerHTML = "";
+        for(let i=6; i>=0; i--) {
+            let d = new Date(); d.setDate(d.getDate()-i);
+            let ds = d.toISOString().split('T')[0];
+            let mins = workLogs.filter(l=>l.date===ds).reduce((a,b)=>a+b.duration,0);
+            let cell = document.createElement('div'); cell.className = 'heat-cell';
+            cell.style.backgroundColor = mins > 0 ? `rgba(155,89,182, ${Math.min(mins/60, 1)})` : '#eee';
+            cell.innerHTML = `<span>${d.getMonth()+1}/${d.getDate()}</span>`; grid.appendChild(cell);
+        }
+        let today = new Date().toISOString().split('T')[0];
+        let logs = workLogs.filter(l=>l.date===today);
+        document.getElementById('summary-list').innerHTML = `<h4>今日清单：</h4>` + logs.map(l=>`<div>· ${l.task} (${l.duration}m)</div>`).join('');
+        openModal('summary-modal');
+    }
+    function exportToCSV() {
+        let csv = "\uFEFF日期,任务,时长\n" + workLogs.map(l=>`${l.date},${l.task},${l.duration}`).join("\n");
+        let link = document.createElement('a');
+        link.href = URL.createObjectURL(new Blob([csv], {type: 'text/csv'}));
+        link.download = "FlowGlow.csv"; link.click();
+    }
+
+    // 撒花
+    const ctx = document.getElementById('confetti-canvas').getContext('2d');
+    function fireConfetti() {
+        let conf = [];
+        let canvas = document.getElementById('confetti-canvas');
+        canvas.width = window.innerWidth; canvas.height = window.innerHeight;
+        for(let i=0; i<100; i++) conf.push({x:canvas.width/2, y:canvas.height/2, vx:(Math.random()-0.5)*15, vy:(Math.random()-0.5)*15, c:'#9b59b6', l:50});
+        function anim() {
+            ctx.clearRect(0,0,canvas.width,canvas.height);
+            conf.forEach(p=>{ p.x+=p.vx; p.y+=p.vy; p.vy+=0.5; p.l--; if(p.l>0) { ctx.fillStyle=p.c; ctx.fillRect(p.x,p.y,8,8); } });
+            if(conf.some(p=>p.l>0)) requestAnimationFrame(anim);
+        }
+        anim();
+    }
+</script>
+</body>
+</html>
