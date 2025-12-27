@@ -1,5 +1,4 @@
-// 缓存版本号：如果有代码更新，请修改这里的版本号（例如 v12.8 -> v12.9）
-const CACHE_NAME = 'flow-glow-v12.8';
+const CACHE_NAME = 'flow-glow-v13.0'; // 升级个大版本号！
 
 // 需要缓存的文件列表
 const ASSETS_TO_CACHE = [

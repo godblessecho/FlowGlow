@@ -1,6 +1,6 @@
 {
-  "name": "Flow & Glow 专注助手",
-  "short_name": "FlowGlow",
+  "name": "Flow Glow App", 
+  "short_name": "FlowGlowApp",
   "description": "基于心流设计的专注力提升工具",
   "start_url": "index.html",
   "display": "standalone",
