@@ -3,15 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Flow & Glow v12.9</title>
-    
-    <link rel="manifest" href="manifest.json">
+    <title>Flow & Glow v13.6</title> <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#9b59b6">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <link rel="apple-touch-icon" href="icon-purple.png">
+    <link rel="apple-touch-icon" href="logo.png">
 
     <style>
+        /* 保持原有样式不变 */
         :root {
             --bg-gradient: linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 100%);
             --card-bg: rgba(255, 255, 255, 0.94);
@@ -65,14 +64,16 @@
         }
 
         .sub-task-item {
-            background: white; padding: 16px 18px; border-radius: 18px; margin-bottom: 12px;
+            background: white; padding: 16px 15px; border-radius: 18px; margin-bottom: 12px;
             display: flex; justify-content: space-between; align-items: center;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.03); cursor: pointer;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.03); 
             transition: transform 0.2s, background 0.2s;
         }
         .sub-task-item:active { transform: scale(0.98); background: #f8f8f8; }
         .sub-task-item.done { opacity: 0.6; background: #fafafa; }
-        .drag-handle { cursor: grab; color: #ddd; padding-right: 12px; font-size: 20px; }
+        
+        .sort-btn { color: #ddd; padding: 5px; cursor: pointer; font-size: 1.1em; }
+        .sort-btn:active { color: var(--primary-color); }
 
         .timer-circle {
             width: 240px; height: 240px; border-radius: 50%;
@@ -93,37 +94,13 @@
         .btn { background: var(--primary-color); color: white; border: none; padding: 14px 30px; border-radius: 50px; cursor: pointer; font-weight: 600; margin: 5px; font-size: 1em; box-shadow: 0 4px 15px rgba(155, 89, 182, 0.25); }
         .btn:active { transform: scale(0.96); }
 
-        /* 底部操作区样式优化 */
-        .bottom-action-area {
-            margin-top: auto; 
-            padding-bottom: 30px; 
-            display: flex; 
-            justify-content: center; 
-            gap: 60px; /* 增加间距 */
-        }
-        .icon-btn-wrapper {
-            cursor: pointer; 
-            display: flex; 
-            flex-direction: column; 
-            align-items: center; 
-            gap: 8px; 
-            color: #aaa;
-            transition: color 0.2s;
-        }
+        .bottom-action-area { margin-top: auto; padding-bottom: 30px; display: flex; justify-content: center; gap: 60px; }
+        .icon-btn-wrapper { cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 8px; color: #aaa; transition: color 0.2s; }
         .icon-btn-wrapper:active { color: var(--primary-color); transform: scale(0.95); }
-        .icon-symbol { font-size: 32px; } /* 图标变大 */
-        .icon-label { font-size: 14px; font-weight: 500; } /* 文字变大 */
+        .icon-symbol { font-size: 32px; } 
+        .icon-label { font-size: 14px; font-weight: 500; }
 
-        /* 任务拆解文字按钮 */
-        .planning-link-btn {
-            background: none; 
-            border: none; 
-            color: #999; 
-            cursor: pointer; 
-            font-size: 1.15em; /* 字体变大 */
-            padding: 15px; 
-            font-weight: 500;
-        }
+        .planning-link-btn { background: none; border: none; color: #999; cursor: pointer; font-size: 1.15em; padding: 15px; font-weight: 500; }
 
         #app-container::-webkit-scrollbar { display: none; }
         .hidden { display: none !important; }
@@ -145,7 +122,7 @@
 <div id="app-container">
     <div class="content-wrapper">
         <div id="step-input" class="fade-in">
-            <h1 style="color:var(--primary-color); margin-top: 20px;">Flow & Glow</h1>
+            <h1 style="color:var(--primary-color); margin-top: 20px;">Flow & Glow <span style="font-size:0.4em; background:#ff6b6b; color:white; padding:2px 6px; border-radius:4px; vertical-align:middle;">v13.6</span></h1>
             <p style="margin-bottom: 40px;">今天想种下什么种子？</p>
             <input type="text" id="big-task-input" placeholder="✨ 输入任务名称...">
             <div style="display:flex; justify-content:center; gap:10px; margin-bottom: 30px;">
@@ -169,10 +146,10 @@
         </div>
 
         <div id="step-planning" class="hidden fade-in">
-            <h2>🗓️ 任务拆解</h2>
+            <h2>🗓️ <span id="plan-title">任务拆解</span></h2>
             <div id="task-progress-bar" style="height:6px; background:#eee; border-radius:10px; margin: 20px 0;"><div id="progress-fill-line" style="height:100%; width:0%; background:var(--primary-color); border-radius:10px; transition:0.4s;"></div></div>
             <div style="display:flex; gap:10px; margin-bottom:20px;">
-                <input type="text" id="sub-task-input" placeholder="下一步是..." style="flex:1; margin-bottom:0;">
+                <input type="text" id="sub-task-input" placeholder="下一步是..." style="flex:1; margin-bottom:0;" onkeydown="if(event.key==='Enter') addSubTask()">
                 <button class="btn" style="margin:0; padding:0 25px;" onclick="addSubTask()">+</button>
             </div>
             <div id="planning-list" style="flex:1; overflow-y:auto; text-align:left; padding-bottom: 20px;"></div>
@@ -220,7 +197,7 @@
         <h3>📝 复盘热力图</h3>
         <div id="heatmap-grid" class="heatmap-container"></div>
         <div id="summary-list" style="text-align:left; color:#666; font-size:0.9em; border-top:1px solid #eee; padding-top:15px; max-height: 200px; overflow-y: auto;"></div>
-        <button class="btn" style="margin-top:20px; width:100%; background:#2ecc71" onclick="exportToCSV()">📥 导出数据</button>
+        <button class="btn" style="margin-top:20px; width:100%; background:var(--primary-color)" onclick="exportToCSV()">📥 导出数据</button>
         <button onclick="closeModal('summary-modal')" style="background:none; border:none; color:#bbb; margin-top:15px; padding: 10px;">关闭</button>
     </div>
 </div>
@@ -228,6 +205,7 @@
 <div id="depot-modal" class="modal-overlay">
     <div class="modal-card">
         <h3>🧺 灵感篮子</h3>
+        <p style="font-size:0.8em; color:#aaa; margin-bottom:15px;">点击文字或火箭即可开始任务</p>
         <input type="text" id="depot-input" placeholder="输入灵感..." onkeydown="if(event.key==='Enter') addToDepot()" style="margin-bottom:10px;">
         <div id="depot-list" style="text-align:left; max-height:300px; overflow-y:auto;"></div>
         <button onclick="closeModal('depot-modal')" style="background:none; border:none; color:#bbb; margin-top:15px; padding: 10px;">关闭</button>
@@ -235,9 +213,7 @@
 </div>
 
 <script>
-    if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js'); });
-    }
+    if ('serviceWorker' in navigator) { window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js'); }); }
 
     let workLogs = JSON.parse(localStorage.getItem('flow_v11_logs')) || [];
     let depotTasks = JSON.parse(localStorage.getItem('flow_v11_tasks')) || [];
@@ -245,7 +221,7 @@
     let currentTask = "";
     let currentIndex = -1;
     let timer, totalSec, remainSec, isPaused, isRest = false;
-    let draggedIndex = null;
+    let inFlowMode = false; 
 
     const PRAISES = ["行动力爆表！🚀", "你专注的样子真好看✨", "进度条君表示很满意！", "效率简直不科学！", "给自己点个赞👍", "ENFP的超能力爆发了！", "没有什么能阻挡你！"];
 
@@ -260,36 +236,72 @@
         currentTask = document.getElementById('big-task-input').value || "✨ 快速专注"; 
         isRest = false; startTimer(currentTask, m); 
     }
+    
+    // 💡 确保这个函数存在
     function toPlanning() { 
         let val = document.getElementById('big-task-input').value;
-        if(!val) return alert("请先输入任务名称~");
-        document.getElementById('plan-title').innerText = val;
+        if(!val) {
+            val = "我的计划"; // 默认名
+            document.getElementById('big-task-input').value = val;
+        }
+        
+        // 安全地更新标题
+        try { document.getElementById('plan-title').innerText = val; } catch(e){}
+        
         showSection('step-planning');
         renderSubTasks();
     }
     
+    function addToDepot() {
+        let v = document.getElementById('depot-input').value;
+        if(v) { depotTasks.push(v); saveDepot(); document.getElementById('depot-input').value=""; updateDepotUI(); }
+    }
+    function deleteFromDepot(i) { depotTasks.splice(i, 1); saveDepot(); updateDepotUI(); }
+    function saveDepot() { localStorage.setItem('flow_v11_tasks', JSON.stringify(depotTasks)); }
+    function updateDepotUI() {
+        document.getElementById('depot-list').innerHTML = depotTasks.map((t,i) => `
+            <div style="padding:12px 5px; border-bottom:1px solid #eee; display:flex; justify-content:space-between; align-items:center;">
+                <span onclick="startFromDepot('${t}')" style="flex:1; cursor:pointer; font-size:1.1em;">${t}</span>
+                <div style="display:flex; gap:15px; align-items:center;">
+                    <span onclick="startFromDepot('${t}')" style="cursor:pointer; font-size:1.2em;" title="开始任务">🚀</span>
+                    <span onclick="deleteFromDepot(${i})" style="color:#ff6b6b; cursor:pointer; font-size:1.4em; padding:0 5px;" title="删除">×</span>
+                </div>
+            </div>`
+        ).join('');
+    }
+    function startFromDepot(taskName) {
+        currentTask = taskName; closeModal('depot-modal');
+        document.getElementById('current-task-name-display').innerText = currentTask; showSection('step-setup');
+    }
+
     function addSubTask() {
         let input = document.getElementById('sub-task-input');
         if(input.value) { subTasks.push({name: input.value, done: false}); input.value = ""; renderSubTasks(); }
     }
+    
+    function moveTask(index, direction) {
+        if (direction === -1 && index === 0) return;
+        if (direction === 1 && index === subTasks.length - 1) return;
+        const temp = subTasks[index];
+        subTasks[index] = subTasks[index + direction];
+        subTasks[index + direction] = temp;
+        renderSubTasks();
+    }
+
     function renderSubTasks() {
         let list = document.getElementById('planning-list');
         list.innerHTML = "";
         subTasks.forEach((t, i) => {
             let div = document.createElement('div');
             div.className = `sub-task-item ${t.done ? 'done' : ''}`;
-            div.draggable = true;
-            div.innerHTML = `<span class="drag-handle">☰</span><span style="flex:1" onclick="goToSetup(${i})">${t.name}</span><span>${t.done ? '✅' : '👉'}</span>`;
-            
-            div.ondragstart = (e) => { draggedIndex = i; e.stopPropagation(); };
-            div.ondragover = e => e.preventDefault();
-            div.ondrop = (e) => {
-                const temp = subTasks[draggedIndex];
-                subTasks.splice(draggedIndex, 1);
-                subTasks.splice(i, 0, temp);
-                renderSubTasks();
-                e.stopPropagation();
-            };
+            div.innerHTML = `
+                <div style="display:flex; flex-direction:column; gap:2px; margin-right:10px;">
+                    <span class="sort-btn" onclick="event.stopPropagation(); moveTask(${i}, -1)">▲</span>
+                    <span class="sort-btn" onclick="event.stopPropagation(); moveTask(${i}, 1)">▼</span>
+                </div>
+                <span style="flex:1" onclick="goToSetup(${i})">${t.name}</span>
+                <span>${t.done ? '✅' : '👉'}</span>
+            `;
             list.appendChild(div);
         });
         let pct = subTasks.length ? (subTasks.filter(t=>t.done).length / subTasks.length * 100) : 0;
@@ -302,49 +314,56 @@
     function startTimer(name, m) {
         document.getElementById('focus-task-display').innerText = name;
         showSection('step-focus');
-        totalSec = m * 60; remainSec = totalSec; isPaused = false;
+        totalSec = m * 60; remainSec = totalSec; isPaused = false; inFlowMode = false; 
+        document.getElementById('timer-status').innerText = "专注模式";
+        document.getElementById('timer-status').style.color = ""; 
         updateTimerUI();
         clearInterval(timer);
         timer = setInterval(() => {
             if(!isPaused) { 
-                remainSec--; updateTimerUI(); 
-                if(remainSec <= 0) { clearInterval(timer); playChime(); finishTask(); } 
+                remainSec--; 
+                if(remainSec === 0) {
+                    playChime(); inFlowMode = true; 
+                    document.getElementById('timer-status').innerText = "🔥 心流模式";
+                    document.getElementById('timer-status').style.color = "#ff6b6b"; 
+                }
+                updateTimerUI(); 
             }
         }, 1000);
     }
+
     function updateTimerUI() {
-        let min = Math.floor(remainSec/60).toString().padStart(2,'0');
-        let sec = (remainSec%60).toString().padStart(2,'0');
-        document.getElementById('timer-display').innerText = `${min}:${sec}`;
-        document.getElementById('timer-progress').style.height = ((totalSec-remainSec)/totalSec*100) + '%';
+        if(remainSec >= 0) {
+            let min = Math.floor(remainSec/60).toString().padStart(2,'0');
+            let sec = (remainSec%60).toString().padStart(2,'0');
+            document.getElementById('timer-display').innerText = `${min}:${sec}`;
+            document.getElementById('timer-progress').style.height = ((totalSec-remainSec)/totalSec*100) + '%';
+        } else {
+            let absSec = Math.abs(remainSec); 
+            let min = Math.floor(absSec/60).toString().padStart(2,'0');
+            let sec = (absSec%60).toString().padStart(2,'0');
+            document.getElementById('timer-display').innerText = `+ ${min}:${sec}`;
+            document.getElementById('timer-progress').style.height = '100%'; 
+        }
     }
+
     function togglePause() { isPaused = !isPaused; document.getElementById('pause-btn').innerText = isPaused ? "▶️ 继续" : "☕ 暂停"; }
     
     function finishTask() {
         clearInterval(timer);
         if(isRest) { backToPlanning(); return; }
-        
         const today = new Date().toISOString().split('T')[0];
         const actualMins = Math.ceil((totalSec - remainSec)/60) || 1;
         workLogs.push({date: today, task: currentTask, duration: actualMins});
         localStorage.setItem('flow_v11_logs', JSON.stringify(workLogs));
-        
         if(currentIndex !== -1) subTasks[currentIndex].done = true;
-        
         document.getElementById('praise-text').innerText = PRAISES[Math.floor(Math.random() * PRAISES.length)];
         showSection('step-celebrate');
         fireConfetti();
     }
+    
     function startRest() { isRest = true; startTimer("🧘 休息时间", 5); }
     function backToPlanning() { isRest = false; if(subTasks.length) { renderSubTasks(); showSection('step-planning'); } else { location.reload(); } }
-
-    function addToDepot() {
-        let v = document.getElementById('depot-input').value;
-        if(v) { depotTasks.push(v); localStorage.setItem('flow_v11_tasks', JSON.stringify(depotTasks)); document.getElementById('depot-input').value=""; updateDepotUI(); }
-    }
-    function updateDepotUI() {
-        document.getElementById('depot-list').innerHTML = depotTasks.map((t,i) => `<div style="padding:10px; border-bottom:1px solid #eee; display:flex; justify-content:space-between;">${t} <span onclick="depotTasks.splice(${i},1);localStorage.setItem('flow_v11_tasks',JSON.stringify(depotTasks));updateDepotUI()" style="color:#ff6b6b;cursor:pointer;">×</span></div>`).join('');
-    }
 
     function showDailySummary() {
         let grid = document.getElementById('heatmap-grid'); grid.innerHTML = "";
